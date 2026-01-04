@@ -1,0 +1,20 @@
+# Cria o .gitignore com as entradas necessárias para Terraform e outros arquivos grandes/temporários
+cat << EOF > .gitignore
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Docker/Kind/LocalStack temporários
+*.log
+EOF
