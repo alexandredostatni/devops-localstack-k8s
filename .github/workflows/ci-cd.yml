@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Start LocalStack
-        uses: localstack/setup-localstack@v1
+        uses: localstack/setup-localstack@v0.2.0
         with:
           image-tag: latest
 
