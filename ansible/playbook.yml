@@ -1,0 +1,17 @@
+---
+- name: Configurar monitoramento no cluster Kubernetes
+  hosts: local
+  become: yes
+  tasks:
+    - name: Criar namespace monitoring
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: monitoring
+
+    - name: Instalar Node Exporter via Helm (idempotente)
+      command: helm upgrade --install node-exporter prometheus-community/prometheus-node-exporter --namespace monitoring
+      changed_when: false
