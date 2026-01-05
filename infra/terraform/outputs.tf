@@ -1,5 +1,5 @@
 output "bucket_name" {
-  value = aws_s3_bucket.data_bucket.bucket
+  value = aws_s3_bucket.test.bucket
 }
 
 output "table_name" {
