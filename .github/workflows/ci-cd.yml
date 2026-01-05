@@ -64,6 +64,10 @@ jobs:
           cluster_name: kind
           load_image: myapp:latest
 
+      - name: Verify Kind cluster is running
+        run: |
+          kind get nodes
+
       # =========================
       # Deploy manifests
       # =========================
