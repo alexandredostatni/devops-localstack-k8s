@@ -45,9 +45,11 @@ jobs:
 
       - name: Create Kind cluster
         uses: helm/kind-action@v1.8.0
+        with:
+          cluster name: devops-cluster
 
       - name: Load image into Kind
-        run: kind load docker-image myapp:latest
+        run: kind load docker-image myapp:latest --name devops-cluster
 
       - name: Deploy to Kubernetes
         run: |
