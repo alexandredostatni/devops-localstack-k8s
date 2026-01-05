@@ -46,10 +46,10 @@ jobs:
       - name: Create Kind cluster
         uses: helm/kind-action@v1.8.0
         with:
-          cluster name: devops-cluster
+          cluster name: kind
 
       - name: Load image into Kind
-        run: kind load docker-image myapp:latest --name devops-cluster
+        run: kind load docker-image myapp:latest
 
       - name: Deploy to Kubernetes
         run: |
@@ -67,3 +67,8 @@ jobs:
       - name: Verify application
         run: |
           kubectl wait --for=condition=ready pod -l app=myapp --timeout=120s
+
+      - name: Install Ansible dependencies
+        run: |
+          pip install ansible kubernetes
+          ansible-galaxy collection install kubernetes.core
