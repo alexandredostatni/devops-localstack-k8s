@@ -7,14 +7,14 @@ app = FastAPI()
 # Configuração boto3 para LocalStack
 s3 = boto3.client(
     's3',
-    endpoint_url='http://host.docker.internal:4566',
+    endpoint_url=LOCALSTACK_URL,
     aws_access_key_id='test',
     aws_secret_access_key='test'
 )
 
 dynamodb = boto3.resource(
     'dynamodb',
-    endpoint_url='http://host.docker.internal:4566',
+    endpoint_url=LOCAL,
     aws_access_key_id='test',
     aws_secret_access_key='test'
 )
