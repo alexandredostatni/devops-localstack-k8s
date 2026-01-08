@@ -14,7 +14,7 @@ jobs:
 
       - name: Start LocalStack
         id: localstack
-        uses: LocalStack/setup-localstack@v2.0.0
+        uses: LocalStack/setup-localstack@v4.12.0
         with:
           image-tag: "3.0"
           services: s3,dynamodb
