@@ -1,20 +1,16 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: myapp
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: myapp
-  template:
-    metadata:
-      labels:
-        app: myapp
-    spec:
       containers:
       - name: myapp
         image: myapp:latest
         ports:
         - containerPort: 80
-# Inline: PullPolicy: IfNotPresent for local dev. Idempotent apply.
+        env:
+        - name: AWS_ENDPOINT_URL
+          value: "http://host.docker.internal:4566"  # Funciona localmente
+
+      - name: Debug failing pods
+      run: |
+       kubectl get pods -o wide
+       kubectl describe pod -l app=myapp
+       kubectl logs -l app=myapp --all-containers=true || true
+
+       kubectl wait --for=condition=ready pod -l app=myapp --timeout=300s

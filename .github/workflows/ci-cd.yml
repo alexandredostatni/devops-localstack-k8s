@@ -1,102 +1,109 @@
-name: DevOps CI/CD Pipeline
+name: DevOps CI/CD
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout do código
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Iniciar LocalStack
-        uses: LocalStack/setup-localstack@v0.2.3
+      - name: Start LocalStack
+        id: localstack
+        uses: LocalStack/setup-localstack@v0.1.5
         with:
-          image-tag: latest
-          install-awslocal: "true"
+          image-tag: '3.0'
           services: s3,dynamodb
+          port: 4566
 
-      - name: Configurar Terraform
+      - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
 
-      - name: Terraform Init, Validate e Apply
+      - name: Terraform Init and Apply
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL_S3: http://localhost:4566
+          AWS_ENDPOINT_URL_DYNAMODB: http://localhost:4566
         run: |
           cd infra/terraform
           terraform init
           terraform validate
           terraform apply -auto-approve
-        env:
-          AWS_ACCESS_KEY_ID: test
-          AWS_SECRET_ACCESS_KEY: test
-          AWS_DEFAULT_REGION: eu-west-1
-          AWS_ENDPOINT_URL_S3: http://localhost:4566
-          AWS_ENDPOINT_URL_DYNAMODB: http://localhost:4566
 
-      - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build da imagem Docker da aplicação
+      - name: Build Docker Image
         run: |
           cd app
           docker build -t myapp:latest .
 
-      - name: Instalar Kind manualmente
-        run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
-          kind version
+      - name: Set up Kind
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: devops-cluster
 
-      - name: Criar cluster Kind
+      - name: Verify Kind cluster is running
         run: |
-          kind create cluster --name kind --wait 120s
+          kind get clusters
+          kubectl get nodes
 
-      - name: Carregar imagem Docker no cluster Kind
+      - name: Expose LocalStack to Kind network
         run: |
-          kind load docker-image myapp:latest --name kind
+          LOCALSTACK_CONTAINER=$(docker ps --filter "ancestor=localstack/localstack" --format "{{.ID}}")
+          docker network connect kind $LOCALSTACK_CONTAINER || true
 
-      - name: Instalar kubectl (se necessário)
+      - name: Load Image to Kind
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
+          kind load docker-image myapp:latest --name devops-cluster
 
-      - name: Criar namespace monitoring
+      - name: Create namespaces
         run: |
           kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Deploy da aplicação e monitoramento no Kubernetes
+      - name: Deploy to Kubernetes
         run: |
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/prometheus/
           kubectl apply -f k8s/grafana/
 
-      - name: Instalar Ansible
+      - name: Install Ansible dependencies
         run: |
-          python3 -m pip install ansible kubernetes
+          pip install ansible kubernetes
+          ansible-galaxy collection install kubernetes.core
 
-      - name: Executar playbook Ansible
+      - name: Run Ansible Playbook
         run: |
           cd ansible
           ansible-playbook -i inventory.ini playbook.yml
 
-      - name: Verificar aplicação e métricas
+      - name: Wait for app pod to be ready (with better debugging)
         run: |
           echo "Aguardando pods ficarem prontos..."
-          kubectl wait --for=condition=ready pod -l app=myapp --timeout=180s
-          kubectl wait --for=condition=ready pod -l app=prometheus -n monitoring --timeout=180s || true
+          kubectl get pods -l app=myapp
 
-          echo "Testando endpoint de métricas..."
-          kubectl port-forward svc/myapp-service 8000:80 > /dev/null 2>&1 &
-          sleep 15
-          curl -f http://localhost:8000/metrics && echo "Métricas OK!" || echo "Métricas não disponíveis ainda (normal no primeiro run)"
+          for i in {1..30}; do
+            if kubectl wait --for=condition=ready pod -l app=myapp --timeout=10s; then
+              echo "Pod está ready!"
+              exit 0
+            else
+              echo "Tentativa $i/30: Pod ainda não está ready"
+              kubectl get pods -l app=myapp
+              kubectl logs -l app=myapp --tail=50 || true
+              kubectl describe pod -l app=myapp || true
+              sleep 10
+            fi
+          done
 
-      - name: Pipeline concluído com sucesso
-        run: echo "Todo o pipeline DevOps local executou com sucesso no GitHub Actions!"
+          echo "ERRO: Pod não ficou ready após 5 minutos"
+          exit 1
+
+      - name: Verify metrics endpoint
+        run: |
+          kubectl port-forward svc/myapp-service 8000:80 >/dev/null 2>&1 &
+          sleep 5
+          curl -f http://localhost:8000/metrics | head -20
