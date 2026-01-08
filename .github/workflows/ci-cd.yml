@@ -14,9 +14,9 @@ jobs:
 
       - name: Start LocalStack
         id: localstack
-        uses: LocalStack/setup-localstack@v0.1.5
+        uses: LocalStack/setup-localstack@v0.1.4
         with:
-          image-tag: '3.0'
+          image-tag: "3.0"
           services: s3,dynamodb
           port: 4566
 
