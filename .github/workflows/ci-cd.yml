@@ -13,7 +13,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start LocalStack
-        id: localstack
         uses: LocalStack/setup-localstack@v4.12.0
         with:
           image-tag: "3.0"
@@ -46,7 +45,11 @@ jobs:
         with:
           cluster_name: devops-cluster
 
-      - name: Verify Kind cluster is running
+      - name: Set kubectl context
+        run: |
+          kubectl config use-context kind-devops-cluster
+
+      - name: Verify Kind cluster
         run: |
           kind get clusters
           kubectl get nodes
@@ -59,6 +62,10 @@ jobs:
       - name: Load Image to Kind
         run: |
           kind load docker-image myapp:latest --name devops-cluster
+
+      - name: Verify image exists inside Kind
+        run: |
+          docker exec devops-cluster-control-plane crictl images | grep myapp
 
       - name: Create namespaces
         run: |
@@ -81,26 +88,9 @@ jobs:
           cd ansible
           ansible-playbook -i inventory.ini playbook.yml
 
-      - name: Wait for app pod to be ready (with better debugging)
+      - name: Wait for app pod to be ready
         run: |
-          echo "Aguardando pods ficarem prontos..."
-          kubectl get pods -l app=myapp
-
-          for i in {1..30}; do
-            if kubectl wait --for=condition=ready pod -l app=myapp --timeout=10s; then
-              echo "Pod está ready!"
-              exit 0
-            else
-              echo "Tentativa $i/30: Pod ainda não está ready"
-              kubectl get pods -l app=myapp
-              kubectl logs -l app=myapp --tail=50 || true
-              kubectl describe pod -l app=myapp || true
-              sleep 10
-            fi
-          done
-
-          echo "ERRO: Pod não ficou ready após 5 minutos"
-          exit 1
+          kubectl wait --for=condition=ready pod -l app=myapp --timeout=300s
 
       - name: Verify metrics endpoint
         run: |
