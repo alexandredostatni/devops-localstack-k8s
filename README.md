@@ -41,3 +41,35 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/local/bin/
 curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && chmod 700 get_helm.sh && ./get_helm.sh
 wget https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip && unzip terraform_1.5.7_linux_amd64.zip && sudo mv terraform /usr/local/bin/
+
+project-root/
+├── README.md
+├── app/
+│   ├── main.py          # FastAPI app code
+│   ├── requirements.txt # Python dependencies
+│   └── Dockerfile       # Docker build for app
+├── infra/
+│   └── terraform/
+│       ├── main.tf      # Terraform config for LocalStack
+│       ├── variables.tf
+│       └── outputs.tf
+├── k8s/
+│   ├── deployment.yaml  # Kubernetes Deployment for app
+│   ├── service.yaml     # Service for app
+│   ├── prometheus/      # Prometheus manifests
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── configmap.yaml  # prometheus.yml
+│   └── grafana/         # Grafana manifests
+│       ├── deployment.yaml
+│       ├── service.yaml
+│       └── configmap.yaml  # Dashboards config
+├── ansible/
+│   ├── playbook.yml     # Ansible playbook for K8s setup
+│   └── inventory.ini    # Local inventory
+├── monitoring/
+│   └── dashboards/      # JSON files for Grafana dashboards (e.g., app-metrics.json)
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml    # GitHub Actions workflow
+└── tests/               # Optional: Unit tests for app (e.g., test_main.py)
