@@ -14,3 +14,9 @@
        kubectl logs -l app=myapp --all-containers=true || true
 
        kubectl wait --for=condition=ready pod -l app=myapp --timeout=300s
+
+       spec:
+         containers:
+           - name: myapp
+             image: myapp:latest
+             imagePullPolicy: IfNotPresent
