@@ -1,8 +1,14 @@
-name: DevOps CI/CD
+name: CI/CD Pipeline
 
 on:
   push:
+    branches:
+      - main
+      - fix/**
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build-deploy:
