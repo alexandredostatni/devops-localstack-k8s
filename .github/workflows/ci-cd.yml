@@ -19,7 +19,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start LocalStack
-        uses: LocalStack/setup-localstack@v4
+        uses: localstack/setup-localstack@main
+
         with:
           image-tag: "3.0"
           services: s3,dynamodb
